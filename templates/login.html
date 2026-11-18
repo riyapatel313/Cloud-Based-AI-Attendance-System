@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign in - AI Attendance</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="auth-page">
+  <header class="auth-top"><div class="brand">AI Attendance</div></header>
+  <div class="auth-body">
+    <div class="auth-card">
+      <section class="auth-info">
+        <h1>Classroom attendance, recorded by camera.</h1>
+        <ul>
+          <li><b>Automatic</b>Students are recognised by face and marked present.</li>
+          <li><b>For teachers</b>Manage classes, correct marks and export reports.</li>
+          <li><b>For students</b>See your own attendance for every class.</li>
+        </ul>
+      </section>
+      <section class="auth-form">
+        <div class="tabs" role="tablist">
+          <button id="tab-in" class="on" type="button">Sign in</button>
+          <button id="tab-up" type="button">Teacher sign-up</button>
+        </div>
+
+        <form id="form-in" class="stack">
+          <div><label for="u1">Username or student ID</label><input id="u1" autocomplete="username" required></div>
+          <div><label for="p1">Password</label><input id="p1" type="password" autocomplete="current-password" required></div>
+          <p class="error" id="err-in"></p>
+          <button type="submit">Sign in</button>
+          <p class="muted small">Students: use your student ID. Your teacher gives you the password.</p>
+        </form>
+
+        <form id="form-up" class="stack hidden">
+          <div><label for="n2">Full name</label><input id="n2" required minlength="2"></div>
+          <div><label for="u2">Username</label><input id="u2" required minlength="3" autocomplete="username"></div>
+          <div><label for="p2">Password (6+ characters)</label><input id="p2" type="password" required minlength="6" autocomplete="new-password"></div>
+          <div><label for="c2">Teacher sign-up code</label><input id="c2" required></div>
+          <p class="error" id="err-up"></p>
+          <button type="submit">Create teacher account</button>
+          <p class="muted small">The code is TEACHER_SIGNUP_CODE in the .env file (default: TEACHER123).</p>
+        </form>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="/static/js/common.js"></script>
+<script>
+  if (localStorage.getItem('token')) location.href = '/' + localStorage.getItem('role');
+  const show = (up) => {
+    $('#form-in').classList.toggle('hidden', up); $('#form-up').classList.toggle('hidden', !up);
+    $('#tab-in').classList.toggle('on', !up); $('#tab-up').classList.toggle('on', up);
+  };
+  $('#tab-in').onclick = () => show(false); $('#tab-up').onclick = () => show(true);
+
+  function start(s) {
+    localStorage.setItem('token', s.access_token); localStorage.setItem('role', s.role); localStorage.setItem('name', s.full_name);
+    location.href = '/' + s.role;
+  }
+  async function submit(e, path, body, errEl) {
+    e.preventDefault(); errEl.textContent = '';
+    const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+    try { start(await api(path, { method: 'POST', body })); }
+    catch (err) { errEl.textContent = err.message; btn.disabled = false; }
+  }
+  $('#form-in').onsubmit = (e) => submit(e, '/auth/login', { username: $('#u1').value, password: $('#p1').value }, $('#err-in'));
+  $('#form-up').onsubmit = (e) => submit(e, '/auth/register-teacher',
+    { full_name: $('#n2').value, username: $('#u2').value, password: $('#p2').value, signup_code: $('#c2').value }, $('#err-up'));
+</script>
+</body>
+</html>

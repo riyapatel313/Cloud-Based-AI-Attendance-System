@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teacher - AI Attendance</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">AI Attendance</div>
+    <nav class="nav">
+      <button data-view="overview" class="on">Overview</button>
+      <button data-view="classes">Classes</button>
+      <button data-view="students">Students</button>
+      <button data-view="attendance">Take attendance</button>
+      <button data-view="reports">Reports</button>
+    </nav>
+    <div class="who"><span><b id="who"></b> · Teacher</span><button id="btn-out">Sign out</button></div>
+  </div>
+</header>
+
+<main>
+  <!-- Overview -->
+  <section class="view" id="view-overview">
+    <div class="head"><h1>Overview</h1></div>
+    <div id="engine-banner"></div>
+    <div class="stats" id="stats"></div>
+    <div class="split-r">
+      <div class="panel"><h2>Recent sessions</h2><div class="tablewrap" id="recent-sessions"></div></div>
+      <div class="panel"><h2>Getting started</h2>
+        <ol class="steps small">
+          <li>Add a class under <b>Classes</b>.</li>
+          <li>Add students under <b>Students</b>.</li>
+          <li>Click <b>Register face</b> for each student.</li>
+          <li>Choose students for the class.</li>
+          <li>Open <b>Take attendance</b> and start scanning.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- Classes -->
+  <section class="view hidden" id="view-classes">
+    <div class="head"><h1>Classes</h1></div>
+    <div class="split">
+      <form class="panel stack" id="course-form">
+        <h2>Add a class</h2>
+        <div><label for="c-code">Code</label><input id="c-code" placeholder="CS101" required maxlength="30"></div>
+        <div><label for="c-name">Class name</label><input id="c-name" placeholder="Intro to Programming" required minlength="2"></div>
+        <div><label for="c-room">Room</label><input id="c-room" placeholder="B-204" maxlength="30"></div>
+        <button type="submit">Add class</button>
+      </form>
+      <div class="panel"><h2>Your classes</h2><div class="tablewrap" id="course-list"></div></div>
+    </div>
+  </section>
+
+  <!-- Students -->
+  <section class="view hidden" id="view-students">
+    <div class="head"><h1>Students</h1></div>
+    <div class="split">
+      <form class="panel stack" id="student-form">
+        <h2>Add a student</h2>
+        <div><label for="s-code">Student ID</label><input id="s-code" required maxlength="30"></div>
+        <div><label for="s-name">Full name</label><input id="s-name" required minlength="2"></div>
+        <div><label for="s-email">Email</label><input id="s-email" type="email" required></div>
+        <div><label for="s-dept">Department</label><input id="s-dept"></div>
+        <div><label for="s-pass">Password (optional)</label><input id="s-pass" type="text" placeholder="Defaults to the student ID" autocomplete="off"></div>
+        <button type="submit">Add student</button>
+        <p class="muted small">The student signs in with their ID and this password. After adding, click "Register face".</p>
+      </form>
+      <div class="panel">
+        <div class="panel-head"><h2>All students</h2>
+          <div style="width:240px"><input id="s-search" placeholder="Search name or ID" aria-label="Search students"></div></div>
+        <div class="tablewrap" id="student-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Take attendance -->
+  <section class="view hidden" id="view-attendance">
+    <div class="head"><h1>Take attendance</h1></div>
+    <div class="panel row">
+      <div class="grow"><label for="a-course">Class</label><select id="a-course"></select></div>
+      <button id="a-start">Start today's session</button>
+      <button id="a-scan" class="ghost hidden">Start scanning</button>
+      <button id="a-end" class="danger hidden">End session</button>
+    </div>
+    <div class="panel empty" id="a-hint">Choose a class and start today's session. The camera and the class list appear here.</div>
+    <div class="live hidden" id="live">
+      <div>
+        <div class="cam" id="cam">
+          <video id="a-video" playsinline muted></video>
+          <canvas id="a-overlay"></canvas>
+          <div class="placeholder" id="cam-note">Starting camera...</div>
+        </div>
+        <p class="muted small" style="margin-top:.5rem" id="scan-note">Press "Start scanning" and let students look at the camera.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2 id="a-title">Roll call</h2><span class="counter" id="a-counter"></span></div>
+        <div class="roster tablewrap" id="a-roster"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Reports -->
+  <section class="view hidden" id="view-reports">
+    <div class="head"><h1>Reports</h1></div>
+    <div class="panel row">
+      <div class="grow"><label for="r-course">Class</label><select id="r-course"></select></div>
+      <button class="ghost" id="r-csv">Download summary (CSV)</button>
+      <button class="ghost" id="r-csv-detail">Download day-by-day (CSV)</button>
+    </div>
+    <div class="split-r">
+      <div class="panel"><h2>Attendance by student</h2>
+        <p class="muted small" style="margin:-.5rem 0 .7rem">Below 75% is amber, below 60% is red.</p>
+        <div class="tablewrap" id="r-students"></div></div>
+      <div class="panel"><h2>Sessions held</h2><div class="tablewrap" id="r-sessions"></div></div>
+    </div>
+  </section>
+</main>
+
+<!-- Choose students for a class -->
+<dialog id="enrol-dialog">
+  <h2 id="enrol-title">Students in class</h2>
+  <div class="checklist" id="enrol-list"></div>
+  <div class="row" style="justify-content:flex-end"><button class="ghost" id="enrol-cancel">Cancel</button><button id="enrol-save">Save</button></div>
+</dialog>
+
+<!-- Register a student's face -->
+<dialog id="face-dialog">
+  <h2 id="face-title">Register face</h2>
+  <p class="muted small" style="margin:.2rem 0 .7rem">Take 3 to 5 photos: face the camera, good light, one person only. Turn your head slightly between photos.</p>
+  <video id="face-video" playsinline muted></video>
+  <div class="shots" id="face-shots"></div>
+  <div class="row">
+    <button id="face-capture">Take photo</button>
+    <button class="ghost" id="face-upload-btn">Upload photos instead</button>
+    <input type="file" id="face-files" accept="image/*" multiple class="hidden">
+  </div>
+  <div class="row" style="justify-content:flex-end;margin-top:.9rem">
+    <button class="ghost" id="face-cancel">Cancel</button><button id="face-save" disabled>Save face data</button>
+  </div>
+</dialog>
+
+<script src="/static/js/common.js"></script>
+<script src="/static/js/teacher.js"></script>
+</body>
+</html>

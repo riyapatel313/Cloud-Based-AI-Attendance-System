@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My attendance</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">AI Attendance</div>
+    <nav class="nav"></nav>
+    <div class="who"><span><b id="who"></b> · Student</span><button id="btn-pw">Change password</button><button id="btn-out">Sign out</button></div>
+  </div>
+</header>
+
+<main>
+  <div class="head"><div><h1 id="title">My attendance</h1><p class="muted" id="sub"></p></div></div>
+  <div id="face-note"></div>
+  <div class="stats" id="stats"></div>
+  <section class="panel"><h2>My classes</h2><div class="tablewrap" id="courses"></div></section>
+  <section class="panel"><h2>Recent days</h2><div class="tablewrap" id="recent"></div></section>
+</main>
+
+<dialog id="pw-dialog">
+  <h2>Change password</h2>
+  <form id="pw-form" class="stack" style="margin-top:.8rem">
+    <div><label for="pw-old">Current password</label><input id="pw-old" type="password" required></div>
+    <div><label for="pw-new">New password (6+ characters)</label><input id="pw-new" type="password" required minlength="6"></div>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="ghost" id="pw-cancel">Cancel</button><button type="submit">Save password</button></div>
+  </form>
+</dialog>
+
+<script src="/static/js/common.js"></script>
+<script>
+if (requireRole('student')) {
+  $('#who').textContent = localStorage.getItem('name') || '';
+  $('#btn-out').onclick = logout;
+  $('#btn-pw').onclick = () => $('#pw-dialog').showModal();
+  $('#pw-cancel').onclick = () => $('#pw-dialog').close();
+  $('#pw-form').onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await api('/auth/change-password', { method: 'POST', body: { old_password: $('#pw-old').value, new_password: $('#pw-new').value } });
+      toast('Password changed', 'ok'); $('#pw-dialog').close(); e.target.reset();
+    } catch (err) { toast(err.message, 'bad'); }
+  };
+
+  (async () => {
+    try {
+      const [me, rep] = await Promise.all([api('/auth/me'), api('/reports/me')]);
+      $('#title').textContent = me.full_name;
+      $('#sub').textContent = `${me.student_code}${me.department ? ' · ' + me.department : ''}`;
+      if (!me.face_count) $('#face-note').innerHTML = '<div class="banner">Your face is not registered yet, so the camera cannot mark you present. Ask your teacher to register it.</div>';
+
+      const total = rep.courses.reduce((a, c) => a + c.total, 0), got = rep.courses.reduce((a, c) => a + c.attended, 0);
+      const overall = total ? Math.round(1000 * got / total) / 10 : 0;
+      $('#stats').innerHTML = `
+        <div class="stat"><b>${total ? overall + '%' : '-'}</b><span class="muted">Overall attendance</span></div>
+        <div class="stat"><b>${got}</b><span class="muted">Classes attended</span></div>
+        <div class="stat"><b>${total - got}</b><span class="muted">Classes missed</span></div>
+        <div class="stat"><b>${rep.courses.length}</b><span class="muted">Classes enrolled</span></div>`;
+
+      $('#courses').innerHTML = rep.courses.length ? `<table><thead><tr><th>Class</th><th>Attended</th><th>Missed</th><th>Attendance</th></tr></thead><tbody>${
+        rep.courses.map((c) => `<tr><td><b>${esc(c.code)}</b> ${esc(c.name)}</td><td>${c.attended} of ${c.total}</td><td>${c.absent}</td><td>${pctCell(c.percentage)}</td></tr>`).join('')}</tbody></table>`
+        : '<div class="empty">You are not enrolled in any class yet.</div>';
+
+      $('#recent').innerHTML = rep.recent.length ? `<table><thead><tr><th>Date</th><th>Class</th><th>Status</th><th>Time</th></tr></thead><tbody>${
+        rep.recent.map((r) => `<tr><td>${fmtDate(r.date)}</td><td>${esc(r.course)}</td><td>${chip(r.status)}</td><td>${r.time || ''}</td></tr>`).join('')}</tbody></table>`
+        : '<div class="empty">No classes have been held yet.</div>';
+    } catch (e) { toast(e.message, 'bad'); }
+  })();
+}
+</script>
+</body>
+</html>
